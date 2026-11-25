@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Simulatore prodotti assicurativi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: consulenza moderna, sicura, calda; numeri grandi e chiari
+   IDEA: una lastra di vetro rosso che "contiene" il capitale e lo fa crescere
+   PICTURE: il risultato netto enorme + curva di crescita su vetro
+   COLOUR and TYPE: rosso #e11d2e dominante, bordeaux profondo, accento corallo; Plus Jakarta Sans
+   LAYOUT: barra prodotto in alto, controlli a sinistra, risultato e grafico a destra, tabella sotto */
+:root{color-scheme:light dark;
+--bg:light-dark(#fff0f0,#14030560);--bg0:light-dark(#fff0f0,#140305);
+--ink:light-dark(#2b0a0d,#fff2f1);--mute:light-dark(#7a3a40,#f0b9bd);
+--glass:light-dark(rgba(255,255,255,.55),rgba(255,255,255,.06));
+--edge:light-dark(rgba(255,255,255,.9),rgba(255,255,255,.16));
+--line:light-dark(rgba(160,20,35,.14),rgba(255,255,255,.1));
+--red:#e11d2e;--deep:light-dark(#9f0f1d,#ff5a67);--coral:#ff7a59;
+--b1:light-dark(#ff4d5a,#b3101f);--b2:light-dark(#ffb199,#6d0614);--b3:light-dark(#ff8fa0,#e11d2e)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg0);color:var(--ink);font:16px/1.55 "Plus Jakarta Sans",system-ui,sans-serif;overflow-x:clip;min-height:100vh}
+.blobs{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+.blobs i{position:absolute;border-radius:50%;filter:blur(70px);opacity:.75}
+.blobs i:nth-child(1){width:46vw;height:46vw;background:var(--b1);top:-12vw;left:-10vw;animation:fl 18s ease-in-out infinite alternate}
+.blobs i:nth-child(2){width:38vw;height:38vw;background:var(--b2);bottom:-10vw;right:-8vw;animation:fl 22s ease-in-out infinite alternate-reverse}
+.blobs i:nth-child(3){width:26vw;height:26vw;background:var(--b3);top:40%;left:45%;opacity:.45;animation:fl 26s ease-in-out infinite alternate}
+@keyframes fl{to{transform:translate(6vw,4vw) scale(1.12)}}
+@media(prefers-reduced-motion:reduce){.blobs i{animation:none}}
+main{position:relative;z-index:1;max-width:1240px;margin:0 auto;padding:clamp(20px,3.5vw,48px) max(4vw,14px) 48px}
+.glass{background:var(--glass);border:1px solid var(--edge);border-radius:26px;backdrop-filter:blur(22px) saturate(1.5);-webkit-backdrop-filter:blur(22px) saturate(1.5);box-shadow:0 20px 50px -20px rgba(120,0,15,.35),inset 0 1px 0 var(--edge)}
+header{display:flex;flex-wrap:wrap;gap:16px 28px;align-items:end;justify-content:space-between;margin-bottom:22px}
+h1{font-size:clamp(30px,4.4vw,48px);line-height:1.05;margin:0;font-weight:800;letter-spacing:-.02em;text-wrap:balance}
+.prod{flex:0 1 560px;padding:6px;border-radius:22px;background:var(--glass)}
+.prod button{min-height:58px;font-size:16px;border-radius:17px}
+.prod button[aria-pressed=true]{background:linear-gradient(135deg,#ff3b4c,#b30f1e)}
+.num{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:14px;background:var(--line);border:1px solid var(--edge);transition:.15s}
+.num:focus-within{outline:2px solid var(--red);outline-offset:2px;background:var(--glass)}
+.num input{width:8.5ch;border:0;background:transparent;color:var(--deep);font-family:inherit;font-size:20px;font-weight:800;text-align:right;outline:none;min-height:36px;padding:0}
+.num em{font-style:normal;font-weight:800;color:var(--deep);font-size:18px}
+.lab label{font-weight:600}
+.sel label{font-size:13px;color:var(--mute);white-space:nowrap}
+select{flex:1;font-family:inherit;font-weight:600;font-size:16px;color:var(--ink);background:transparent;border:0;min-height:44px;cursor:pointer;outline:none}
+select option{color:#2b0a0d}
+.sel:focus-within{outline:2px solid var(--red);outline-offset:2px}
+.grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:20px}
+@media(max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.card{padding:clamp(18px,2.4vw,28px)}
+.ctrl{margin-bottom:24px}.ctrl:last-child{margin-bottom:0}
+.lab{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:8px;font-weight:600}
+.lab output{font-size:20px;font-weight:800;color:var(--deep);white-space:nowrap}
+.hint{font-size:13px;color:var(--mute);margin-top:4px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:44px;background:transparent;cursor:pointer;--p:50%}
+input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:8px;background:linear-gradient(90deg,var(--red) var(--p),var(--line) var(--p))}
+input[type=range]::-moz-range-track{height:8px;border-radius:8px;background:linear-gradient(90deg,var(--red) var(--p),var(--line) var(--p))}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;margin-top:-9px;background:#fff;border:3px solid var(--red);box-shadow:0 4px 14px rgba(225,29,46,.45)}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid var(--red)}
+input[type=range]:focus-visible{outline:2px solid var(--red);outline-offset:4px;border-radius:8px}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:6px;padding:5px;border-radius:16px;background:var(--line)}
+.seg button{font-family:inherit;font-weight:600;font-size:15px;line-height:1.2;color:var(--ink);background:transparent;border:0;border-radius:12px;min-height:44px;padding:6px 8px;cursor:pointer}
+.seg button small{display:block;font-size:12px;font-weight:500;color:var(--mute)}
+.seg button[aria-pressed=true]{background:var(--red);color:#fff;box-shadow:0 6px 18px -6px rgba(225,29,46,.7)}
+.seg button[aria-pressed=true] small{color:#ffd9dc}
+.seg button:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+.tog{display:flex;align-items:center;gap:12px;min-height:44px;cursor:pointer;font-weight:600}
+.tog input{appearance:none;width:48px;height:28px;border-radius:20px;background:var(--line);position:relative;cursor:pointer;flex:none;transition:.2s}
+.tog input::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+.tog input:checked{background:var(--red)}.tog input:checked::after{left:23px}
+.tog input:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+.sub{border-top:1px solid var(--line);padding-top:18px;margin-top:6px}
+.res .k{font-size:14px;color:var(--mute);font-weight:600}
+.big{font-size:clamp(40px,6.4vw,68px);font-weight:800;line-height:1.02;letter-spacing:-.03em;color:var(--deep);margin:4px 0 14px;white-space:nowrap}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px}
+.stat{padding:12px 14px;border-radius:16px;background:var(--line)}
+.stat b{display:block;font-size:19px;white-space:nowrap}.stat span{font-size:13px;color:var(--mute)}
+.fig{position:relative;min-height:300px}.fig>svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--mute);margin-top:10px}
+.legend i{display:inline-block;width:18px;height:3px;border-radius:2px;vertical-align:middle;margin-right:6px}
+.tbl{margin-top:20px}
+h2{font-size:20px;margin:0 0 12px;font-weight:700}
+.scroll{overflow-x:auto;max-height:420px}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{padding:9px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+th{font-size:13px;color:var(--mute);font-weight:600;position:sticky;top:0;background:var(--bg0)}
+th:first-child,td:first-child{text-align:left}
+tr.on td{background:rgba(225,29,46,.13);font-weight:700}
+.note{font-size:13px;color:var(--mute);margin-top:18px;max-width:80ch}
+[hidden]{display:none!important}
+@media(max-width:600px){.lab output{font-size:18px}table{font-size:13px}.seg button{font-size:14px}}
+</style>
+</head>
+<body>
+<div class="blobs"><i></i><i></i><i></i></div>
+<main>
+<header>
+  <h1>Simulatore di rendimento</h1>
+  <div class="seg prod glass" id="prod" role="group" aria-label="Prodotto">
+    <button data-v="p1" aria-pressed="true">Rinnova Valore Bonus<small>Premio unico</small></button>
+    <button data-v="p2" aria-pressed="false">Generazione Risparmio<small>Premio ricorrente</small></button>
+  </div>
+</header>
+
+<!-- PRODOTTO 1 -->
+<section id="s1" class="grid">
+  <div class="card glass">
+    <div class="ctrl"><div class="lab"><label for="a1n">Capitale da investire</label><span class="num"><input id="a1n" inputmode="numeric" autocomplete="off"><em>€</em></span></div>
+      <input type="range" id="a1" min="10000" max="500000" step="1000" value="50000" aria-label="Capitale da investire">
+      <div class="hint">Da 10.000 € a 500.000 €: trascina o scrivi l'importo.</div></div>
+    <div class="ctrl"><div class="lab"><span>Allocazione</span></div>
+      <div class="seg" id="mix1">
+        <button data-v="1" aria-pressed="true">100% Royal Fund<small>tutto in una gestione</small></button>
+        <button data-v="0.6" aria-pressed="false">60% Royal Fund<small>40% GESAV</small></button>
+      </div></div>
+    <div class="ctrl"><div class="lab"><span>Anno di riscatto</span><output id="y1o"></output></div>
+      <input type="range" id="y1" min="1" max="20" step="1" value="10" aria-label="Anno di riscatto">
+      <div class="hint">Trascina da 1 a 20 anni: il valore tiene già conto di tutto ciò che accade al riscatto.</div></div>
+  </div>
+  <div class="card glass res">
+    <div class="k">Valore netto di riscatto</div>
+    <div class="big" id="r1"></div>
+    <div class="stats">
+      <div class="stat"><b id="r1a"></b><span>Capitale investito</span></div>
+      <div class="stat"><b id="r1b"></b><span>Guadagno netto</span></div>
+      <div class="stat"><b id="r1d"></b><span>Guadagno complessivo</span></div>
+      <div class="stat"><b id="r1c"></b><span>Rendimento netto medio annuo</span></div>
+    </div>
+    <div class="fig"><svg id="c1"></svg></div>
+    <div class="legend"><span><i style="background:var(--red)"></i>Allocazione scelta</span><span><i style="background:var(--coral);opacity:.8"></i>Allocazione alternativa</span><span><i style="background:var(--mute);opacity:.6"></i>Capitale investito</span></div>
+  </div>
+  <div class="card glass tbl" style="grid-column:1/-1">
+    <h2>Anno per anno</h2>
+    <div class="scroll"><table><thead><tr><th>Anno</th><th>Capitale</th><th>Netto 100% Royal Fund</th><th>Netto 60/40</th></tr></thead><tbody id="t1"></tbody></table></div>
+  </div>
+</section>
+
+<!-- PRODOTTO 2 -->
+<section id="s2" class="grid" hidden>
+  <div class="card glass">
+    <div class="ctrl"><div class="lab"><label for="m2n">Versamento mensile</label><span class="num"><input id="m2n" inputmode="numeric" autocomplete="off"><em>€</em></span></div>
+      <input type="range" id="m2" min="75" max="1000" step="5" value="200" aria-label="Versamento mensile">
+      <div class="hint">Da 75 € a 1.000 € al mese.</div></div>
+    <div class="ctrl"><div class="lab"><span>Linea di investimento</span></div>
+      <div class="seg" id="mix2">
+        <button data-v="0.9" aria-pressed="true">90% Mondo Azionario<small>10% GESAV</small></button>
+        <button data-v="0.7" aria-pressed="false">70% Mondo Azionario<small>30% GESAV</small></button>
+        <button data-v="0.5" aria-pressed="false">50% Mondo Azionario<small>50% GESAV</small></button>
+      </div></div>
+    <div class="ctrl"><div class="lab"><span>Durata del contratto</span><output id="d2o"></output></div>
+      <input type="range" id="d2" min="2" max="20" step="1" value="15" aria-label="Durata del contratto"></div>
+    <div class="ctrl"><div class="lab"><span>Uscita all'anno</span><output id="x2o"></output></div>
+      <input type="range" id="x2" min="2" max="15" step="1" value="15" aria-label="Anno di uscita">
+      <div class="hint">Riscatto possibile dal secondo anno; all'ultimo anno è la scadenza.</div></div>
+    <div class="ctrl"><div class="lab"><span>Scenario mercati azionari</span></div>
+      <div class="seg" id="sc2">
+        <button data-v="0" aria-pressed="false">Prudente<small>3,5% annuo</small></button>
+        <button data-v="1" aria-pressed="true">Medio<small>7% annuo</small></button>
+        <button data-v="2" aria-pressed="false">Ottimistico<small>10% annuo</small></button>
+      </div></div>
+    <div class="sub">
+      <label class="tog"><input type="checkbox" id="u2on">Versamento aggiuntivo iniziale</label>
+      <div id="ubox" hidden>
+        <div class="ctrl" style="margin-top:14px"><div class="lab"><label for="u2n">Importo una tantum</label><span class="num"><input id="u2n" inputmode="numeric" autocomplete="off"><em>€</em></span></div>
+          <input type="range" id="u2" min="250" max="150000" step="250" value="10000" aria-label="Versamento aggiuntivo">
+          <div class="hint">Da 250 € a 150.000 €.</div></div>
+        <div class="ctrl"><div class="lab"><span>Allocazione aggiuntivo</span></div>
+          <div class="seg" id="umix">
+            <button data-v="0.9" aria-pressed="true">90% GESAV<small>10% Mondo Azionario</small></button>
+            <button data-v="0.7" aria-pressed="false">70% GESAV<small>30% Mondo Azionario</small></button>
+            <button data-v="0.5" aria-pressed="false">50% GESAV<small>50% Mondo Azionario</small></button>
+          </div></div>
+      </div>
+    </div>
+  </div>
+  <div class="card glass res">
+    <div class="k" id="r2k">Valore netto a scadenza</div>
+    <div class="big" id="r2"></div>
+    <div class="stats">
+      <div class="stat"><b id="r2a"></b><span>Totale versato</span></div>
+      <div class="stat"><b id="r2b"></b><span>Guadagno netto</span></div>
+      <div class="stat"><b id="r2d"></b><span>Guadagno complessivo</span></div>
+      <div class="stat"><b id="r2e"></b><span>Rendimento netto medio annuo</span></div>
+      <div class="stat"><b id="r2c"></b><span>Prudente · Ottimistico</span></div>
+    </div>
+    <div class="fig"><svg id="c2"></svg></div>
+    <div class="legend"><span><i style="background:var(--red)"></i>Scenario scelto</span><span><i style="background:var(--coral);opacity:.7"></i>Altri scenari</span><span><i style="background:var(--mute);opacity:.6"></i>Totale versato</span></div>
+  </div>
+  <div class="card glass tbl" style="grid-column:1/-1">
+    <h2>Valore di riscatto anno per anno</h2>
+    <div class="scroll"><table><thead><tr><th>Anno</th><th>Versato</th><th>Prudente 3,5%</th><th>Medio 7%</th><th>Ottimistico 10%</th></tr></thead><tbody id="t2"></tbody></table></div>
+  </div>
+</section>
+
+<p class="note" id="n1">Proiezioni indicative al netto di costi, trattamento al riscatto e imposte sulla plusvalenza. I rendimenti delle gestioni separate sono ipotizzati costanti nel tempo e non sono garantiti.</p>
+<p class="note" id="n2" hidden>Proiezioni indicative al netto di costi, trattamento al riscatto e imposte. Mondo Azionario segna +4,96% da inizio 2026 dopo lo storno autunnale dei titoli tecnologici; i rendimenti annui degli scenari (3,5%, 7%, 10%) sono ipotesi di lungo periodo sui mercati azionari mondiali, applicate alla quota in Mondo Azionario. GESAV ipotizzata costante. Rendimenti passati non garantiscono quelli futuri.</p>
+</main>
+
+<script>
+{
+const $=id=>document.getElementById(id);
+const eur=v=>new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(v);
+const pct=v=>new Intl.NumberFormat('it-IT',{style:'percent',minimumFractionDigits:2,maximumFractionDigits:2}).format(v);
+const fill=r=>r.style.setProperty('--p',((r.value-r.min)/(r.max-r.min)*100)+'%');
+const V={},nf=new Intl.NumberFormat('it-IT');
+const segVal=id=>+document.querySelector('#'+id+' [aria-pressed=true]').dataset.v;
+
+/* ---------- PRODOTTO 1: Rinnova Valore Bonus ---------- */
+const rRF=y=>y===1?.0385:y===2?.0385-.007:.0385-.011;
+const rGS=y=>y===1?.03:y===2?.03-.007:.03-.011;
+function p1(P,mix,n){
+  let a=P*mix,b=P*(1-mix);
+  for(let y=1;y<=n;y++){a*=1+rRF(y);b*=1+rGS(y)}
+  const V=a+b, adj=n<=5?-Math.max(0,.02-.005*(n-1)):.02;
+  const G=V*(1+adj), net=G-Math.max(0,G-P)*.21;
+  return net;
+}
+
+/* ---------- PRODOTTO 2: PAC ---------- */
+const SC=[.035,.07,.10];
+const PEN=[0,0,.30,.25,.20,.15,.10];
+function p2(M,a,dur,g,U,ua){
+  const mMA=(1+g-.02)**(1/12)-1, mGS=(1+.03-.0135)**(1/12)-1;
+  let ma=0,gs=0,vMA=0,vGS=0,uma=U*.99*(1-ua),ugs=U*.99*ua;
+  const out=[];
+  for(let m=0;m<dur*12;m++){
+    const y=Math.floor(m/12)+1, l=y<=9?.03:.02;
+    ma+=M*(1-l)*a; gs+=M*(1-l)*(1-a); vMA+=M*a; vGS+=M*(1-a);
+    ma*=1+mMA; gs*=1+mGS; uma*=1+mMA; ugs*=1+mGS;
+    if(m%12===11){
+      const vers=vMA+vGS+U;
+      if(y<2){out.push({y,vers,net:null});continue}
+      const pen=y===dur?0:(PEN[y]||0);
+      const VA=ma*(1-pen)+uma, VG=gs*(1-pen)+ugs;
+      const tax=Math.max(0,VA-(vMA+U*(1-ua)))*.26+Math.max(0,VG-(vGS+U*ua))*.18;
+      out.push({y,vers,net:VA+VG-tax});
+    }
+  }
+  return out;
+}
+
+/* rendimento medio annuo di un piano ricorrente (tasso interno, flussi mensili) */
+function irr(M,U,n,F){
+  const npv=r=>{let s=-U,d=1;for(let k=0;k<n;k++){s-=M*d;d/=1+r}return s+F*d};
+  let lo=-.05,hi=.05;for(let i=0;i<80;i++){const m=(lo+hi)/2;npv(m)>0?lo=m:hi=m}
+  return (1+(lo+hi)/2)**12-1;
+}
+/* ---------- grafico ---------- */
+function chart(svg,lines,xmax,mark){
+  const W=svg.clientWidth,H=svg.clientHeight; if(!W||!H)return;
+  const small=W<520, L=small?8:62, R=14, T=14, B=28;
+  const all=lines.flatMap(s=>s.pts.filter(p=>p[1]!=null).map(p=>p[1]));
+  let lo=Math.min(...all), hi=Math.max(...all); lo=Math.max(0,lo-(hi-lo)*.08); hi=hi+(hi-lo)*.06||1;
+  const X=x=>L+(x-1)/(xmax-1||1)*(W-L-R), Y=v=>T+(1-(v-lo)/(hi-lo))*(H-T-B);
+  let s='';
+  for(let i=0;i<=4;i++){const v=lo+(hi-lo)*i/4,yy=Y(v);
+    s+=`<line x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}" stroke="var(--line)"/>`;
+    if(!small)s+=`<text x="${L-8}" y="${yy+4}" text-anchor="end" font-size="12" fill="var(--mute)">${v>=1e6?(v/1e6).toFixed(1)+' M':Math.round(v/1000)+'k'}</text>`}
+  const step=small?(xmax>10?5:2):(xmax>12?2:1);
+  for(let x=1;x<=xmax;x++) if(x===1||x%step===0||x===xmax) s+=`<text x="${X(x)}" y="${H-6}" text-anchor="middle" font-size="12" fill="var(--mute)">${x}</text>`;
+  if(mark){s+=`<line x1="${X(mark)}" x2="${X(mark)}" y1="${T}" y2="${H-B}" stroke="var(--red)" stroke-dasharray="3 4" opacity=".6"/>`}
+  for(const l of lines){
+    const p=l.pts.filter(q=>q[1]!=null); if(!p.length)continue;
+    const d=p.map((q,i)=>(i?'L':'M')+X(q[0]).toFixed(1)+' '+Y(q[1]).toFixed(1)).join('');
+    if(l.area){s+=`<defs><linearGradient id="ga${svg.id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e11d2e" stop-opacity=".32"/><stop offset="1" stop-color="#e11d2e" stop-opacity="0"/></linearGradient></defs><path d="${d}L${X(p[p.length-1][0])} ${H-B}L${X(p[0][0])} ${H-B}Z" fill="url(#ga${svg.id})"/>`}
+    s+=`<path d="${d}" fill="none" stroke="${l.c}" stroke-width="${l.w||2}" ${l.dash?'stroke-dasharray="5 5"':''} opacity="${l.o||1}" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }
+  const main=lines.find(l=>l.area);
+  if(main&&mark){const q=main.pts.find(p=>p[0]===mark); if(q&&q[1]!=null)s+=`<circle cx="${X(mark)}" cy="${Y(q[1])}" r="7" fill="#fff" stroke="#e11d2e" stroke-width="3"/>`}
+  svg.innerHTML=s;
+}
+
+/* ---------- render ---------- */
+let draw1=()=>{},draw2=()=>{};
+function r1(){
+  const P=V.a1, mix=segVal('mix1'), n=+$('y1').value, alt=mix===1?.6:1;
+  $('y1o').textContent=n+(n===1?' anno':' anni');
+  const net=p1(P,mix,n);
+  $('r1').textContent=eur(net); $('r1a').textContent=eur(P); $('r1b').textContent=(net>=P?'+':'')+eur(net-P);
+  $('r1c').textContent=pct((net/P)**(1/n)-1);
+  $('r1d').textContent=(net>=P?'+':'')+pct(net/P-1);
+  const yrs=[...Array(20)].map((_,i)=>i+1);
+  const A=yrs.map(y=>[y,p1(P,mix,y)]), B=yrs.map(y=>[y,p1(P,alt,y)]);
+  draw1=()=>chart($('c1'),[{pts:yrs.map(y=>[y,P]),c:'var(--mute)',dash:1,o:.6},{pts:B,c:'var(--coral)',o:.8},{pts:A,c:'#e11d2e',w:3.5,area:1}],20,n);
+  draw1();
+  $('t1').innerHTML=yrs.map(y=>`<tr class="${y===n?'on':''}"><td>${y}</td><td>${eur(P)}</td><td>${eur(p1(P,1,y))}</td><td>${eur(p1(P,.6,y))}</td></tr>`).join('');
+}
+function r2(){
+  const M=V.m2, a=segVal('mix2'), dur=+$('d2').value, sc=segVal('sc2');
+  const x=$('x2'); x.max=dur; if(+x.value>dur)x.value=dur; const ex=+x.value; fill(x);
+  const on=$('u2on').checked; $('ubox').hidden=!on;
+  const U=on?V.u2:0, ua=segVal('umix');
+  $('d2o').textContent=dur+' anni';
+  $('x2o').textContent=ex===dur?ex+' (scadenza)':ex+'° anno';
+  const S=SC.map(g=>p2(M,a,dur,g,U,ua));
+  const rec=S[sc][ex-1], vers=rec.vers, net=rec.net;
+  $('r2k').textContent=ex===dur?'Valore netto a scadenza':'Valore netto di riscatto al '+ex+'° anno';
+  $('r2').textContent=eur(net); $('r2a').textContent=eur(vers);
+  $('r2b').textContent=(net>=vers?'+':'')+eur(net-vers);
+  $('r2d').textContent=(net>=vers?'+':'')+pct(net/vers-1);
+  $('r2e').textContent=pct(irr(M,U,ex*12,net));
+  $('r2c').textContent=eur(S[0][ex-1].net)+' · '+eur(S[2][ex-1].net);
+  const lines=[{pts:S[0].map(r=>[r.y,r.vers]),c:'var(--mute)',dash:1,o:.6}];
+  S.forEach((s,i)=>{if(i!==sc)lines.push({pts:s.map(r=>[r.y,r.net]),c:'var(--coral)',o:.6,w:1.6})});
+  lines.push({pts:S[sc].map(r=>[r.y,r.net]),c:'#e11d2e',w:3.5,area:1});
+  draw2=()=>chart($('c2'),lines,dur,ex); draw2();
+  $('t2').innerHTML=S[0].map((r,i)=>`<tr class="${r.y===ex?'on':''}"><td>${r.y}${r.y===dur?' · scadenza':''}</td><td>${eur(r.vers)}</td>${S.map(s=>`<td>${s[i].net==null?'—':eur(s[i].net)}</td>`).join('')}</tr>`).join('');
+}
+
+function show(){
+  const p=document.querySelector('#prod [aria-pressed=true]').dataset.v;
+  $('s1').hidden=p!=='p1'; $('s2').hidden=p!=='p2'; $('n1').hidden=p!=='p1'; $('n2').hidden=p!=='p2';
+  try{localStorage.setItem('sim-prod',p)}catch(e){}
+  p==='p1'?r1():r2();
+}
+const rer=r=>r.closest('#s1')?r1():r2();
+function bindNum(id){
+  const r=$(id),n=$(id+'n'); V[id]=+r.value; n.value=nf.format(V[id]);
+  r.addEventListener('input',()=>{V[id]=+r.value;n.value=nf.format(V[id])});
+  const parse=()=>parseInt(n.value.replace(/\D/g,''),10);
+  n.addEventListener('input',()=>{const v=parse(); if(v>=+r.min&&v<=+r.max){V[id]=v;r.value=v;fill(r);rer(r)}});
+  n.addEventListener('change',()=>{let v=parse(); if(!(v>0))v=+r.min; v=Math.min(+r.max,Math.max(+r.min,v)); V[id]=v; r.value=v; n.value=nf.format(v); fill(r); rer(r)});
+  n.addEventListener('focus',()=>n.select());
+  n.addEventListener('keydown',e=>{if(e.key==='Enter')n.blur()});
+}
+['a1','m2','u2'].forEach(bindNum);
+document.querySelectorAll('input[type=range]').forEach(r=>{fill(r);r.addEventListener('input',()=>{fill(r);r.closest('#s1')?r1():r2()})});
+document.querySelectorAll('.seg').forEach(g=>g.addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  g.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));
+  g.id==='prod'?show():g.closest('#s1')?r1():r2();
+}));
+$('u2on').addEventListener('change',r2);
+try{const p=localStorage.getItem('sim-prod'); if(p)document.querySelectorAll('#prod button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===p))}catch(e){}
+const ro=new ResizeObserver(()=>{draw1();draw2()}); ro.observe($('c1')); ro.observe($('c2'));
+r1(); r2(); show();
+}
+</script>
+</body>
+</html>
